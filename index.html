@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EGGLU - The Perfect Egg Boiler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- We now have two font links, one for the retro header and one for the readable body text -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Using VT323 for the body, which has a retro terminal feel -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-yellow: #ffc107;
+            --secondary-yellow: #ffb300;
+            --dark-brown: #4a2c2a;
+            --light-yellow: #fddc5c;
+        }
+
+        body {
+            /* Changed to a more readable retro font for the body */
+            font-family: 'VT323', monospace;
+            background-color: #f5e6d6;
+            color: var(--dark-brown);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 1.5rem;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 2.5rem;
+            border-radius: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-width: 90%;
+            width: 450px;
+            animation: fadeInScale 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .button-base {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            text-align: center;
+            border: 2px solid var(--primary-yellow);
+        }
+
+        .selection-button {
+            background-color: #fff;
+            color: var(--dark-brown);
+            border-color: var(--dark-brown);
+        }
+
+        .selection-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .selection-button.active {
+            background-color: var(--primary-yellow);
+            color: var(--dark-brown);
+            border-color: var(--dark-brown);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .main-button {
+            background-color: var(--primary-yellow);
+            color: var(--dark-brown);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid var(--dark-brown);
+        }
+        
+        .main-button:hover {
+            background-color: var(--secondary-yellow);
+            transform: translateY(-2px);
+        }
+
+        .timer-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 250px;
+            height: 300px;
+            margin: 2rem auto;
+        }
+
+        .timer-egg-svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .timer-egg-background {
+            fill: #fff;
+            stroke: var(--primary-yellow);
+            stroke-width: 10px;
+        }
+
+        .timer-progress-path {
+            fill: none;
+            stroke: var(--primary-yellow);
+            stroke-width: 10px;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1s linear;
+        }
+        
+        .timer-text {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-yellow);
+            position: relative;
+            z-index: 1;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .icon {
+            margin-right: 0.5rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .modal-content {
+                padding: 1.5rem;
+            }
+            .timer-text {
+                font-size: 2.5rem;
+            }
+        }
+        
+        /* Retro Logo Style - uses the original font */
+        .retro-logo {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 4px 4px 0 var(--secondary-yellow), 6px 6px 0 var(--dark-brown);
+        }
+    </style>
+</head>
+<body class="bg-[#fffaf0]">
+
+    <!-- Welcome Modal -->
+    <div id="welcome-modal" class="modal-overlay" style="display: flex;">
+        <div class="modal-content text-center border-2 border-[var(--dark-brown)] flex flex-col items-center">
+            <h1 id="welcome-greeting" class="text-4xl sm:text-5xl font-bold mb-4 text-[var(--dark-brown)] retro-logo text-center">
+            </h1>
+            <p id="welcome-message" class="text-xl sm:text-2xl text-[var(--dark-brown)] mb-6 text-center">
+            </p>
+            <button id="close-welcome" class="button-base main-button w-full text-xl sm:text-2xl">
+                Let's get started
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App Content -->
+    <div id="main-app" class="hidden">
+        <div class="bg-white p-8 md:p-12 rounded-[2rem] shadow-2xl max-w-lg w-full text-center border-2 border-[var(--dark-brown)]">
+            <!-- Retro EGGLU Header -->
+            <div class="mb-8">
+                <h1 class="text-5xl sm:text-6xl font-bold text-[var(--dark-brown)] retro-logo">EGGLU</h1>
+                <p class="text-xl sm:text-2xl mt-2 text-gray-600">Your secret to a perfect egg.</p>
+            </div>
+
+            <!-- Egg Size Selection -->
+            <div class="mb-6 flex flex-col items-center">
+                <label class="block text-xl sm:text-2xl text-gray-700 font-semibold mb-2">Egg Size</label>
+                <div id="egg-size-selection" class="flex justify-around gap-2 md:gap-4">
+                    <button data-value="small" class="button-base selection-button flex-1 text-xl sm:text-2xl">Small</button>
+                    <button data-value="medium" class="button-base selection-button flex-1 text-xl sm:text-2xl">Medium</button>
+                    <button data-value="large" class="button-base selection-button flex-1 active text-xl sm:text-2xl">Large</button>
+                    <button data-value="xl" class="button-base selection-button flex-1 text-xl sm:text-2xl">X-Large</button>
+                </div>
+            </div>
+
+            <!-- Boil Type Selection -->
+            <div class="mb-8 flex flex-col items-center">
+                <label class="block text-xl sm:text-2xl text-gray-700 font-semibold mb-2">Boil Type</label>
+                <div id="boil-type-selection" class="flex justify-around gap-2 md:gap-4">
+                    <button data-value="soft" class="button-base selection-button flex-1 active text-xl sm:text-2xl"><i class="fa-solid fa-droplet icon"></i>Soft</button>
+                    <button data-value="jammy" class="button-base selection-button flex-1 text-xl sm:text-2xl"><i class="fa-solid fa-burst icon"></i>Jammy</button>
+                    <button data-value="medium" class="button-base selection-button flex-1 text-xl sm:text-2xl"><i class="fa-solid fa-circle-half-stroke icon"></i>Medium</button>
+                    <button data-value="hard" class="button-base selection-button flex-1 text-xl sm:text-2xl"><i class="fa-solid fa-circle icon"></i>Hard</button>
+                </div>
+            </div>
+
+            <button id="show-instructions" class="button-base main-button w-full text-xl sm:text-2xl flex items-center justify-center">
+                Ready? <i class="fa-solid fa-fire ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-gray-800">Your Instructions</h2>
+            <p class="text-xl sm:text-2xl text-gray-700 mb-6">
+                To achieve the perfect boil, follow these steps with love:
+            </p>
+            <ul class="list-none text-left space-y-4 mb-6 text-gray-700 text-lg sm:text-xl">
+                <li class="flex items-start">
+                    <i class="fa-solid fa-1 text-[var(--primary-yellow)] mr-2 mt-1"></i>
+                    <p>Gently place your egg(s) in a saucepan and cover with cold water.</p>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa-solid fa-2 text-[var(--primary-yellow)] mr-2 mt-1"></i>
+                    <p>Bring the water to a full boil over high heat.</p>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa-solid fa-3 text-[var(--primary-yellow)] mr-2 mt-1"></i>
+                    <p>Once boiling, reduce the heat to a gentle simmer.</p>
+                </li>
+            </ul>
+            <p class="text-xl sm:text-2xl text-gray-700 mb-6">
+                Once you've done this, click the 'Start Timer' button below and let the magic happen!
+            </p>
+            <button id="start-timer" class="button-base main-button w-full text-xl sm:text-2xl">
+                Start Timer
+            </button>
+        </div>
+    </div>
+
+    <!-- Timer Modal -->
+    <div id="timer-modal" class="modal-overlay">
+        <div class="modal-content text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-gray-800">Cooking...</h2>
+            <p class="text-xl sm:text-2xl text-gray-600 mb-4">Your perfect egg is on its way.</p>
+
+            <div class="timer-container">
+                <svg class="timer-egg-svg" viewBox="0 0 250 300">
+                    <path class="timer-egg-background" d="M125,290 C175,290 240,220 240,150 C240,80 175,10 125,10 C75,10 10,80 10,150 C10,220 75,290 125,290 Z" />
+                    <path id="timer-progress-path" class="timer-progress-path" d="M125,290 C175,290 240,220 240,150 C240,80 175,10 125,10 C75,10 10,80 10,150 C10,220 75,290 125,290 Z" />
+                </svg>
+                <span id="timer-display" class="timer-text">0:00</span>
+            </div>
+
+            <p id="timer-message" class="text-lg sm:text-xl text-gray-700 font-semibold mt-4"></p>
+
+            <button id="cancel-timer" class="button-base w-full bg-red-500 hover:bg-red-600 text-white mt-6 text-xl sm:text-2xl">
+                Cancel
+            </button>
+                    </div>
+    </div>
+    
+    <!-- Notification Message Box (replaces alert) -->
+    <div id="notification-box" class="fixed top-8 right-8 bg-gray-800 text-white p-4 rounded-xl shadow-xl z-50 transition-transform duration-300 transform translate-x-full opacity-0">
+        <div class="flex items-center">
+            <i class="fa-solid fa-bell text-yellow-300 mr-3 text-lg"></i>
+            <span id="notification-message" class="font-semibold text-lg"></span>
+        </div>
+    </div>
+
+    <audio id="ding-sound" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" preload="auto"></audio>
+
+    <script>
+        // Use a more appropriate, shorter sound clip for production.
+        document.getElementById('ding-sound').volume = 0.5;
+
+        // Utility to convert seconds to MM:SS format
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+
+        // Timer logic variables
+        let totalTime = 0;
+        let timeLeft = 0;
+        let timerInterval;
+        let isHalfTime = false;
+        
+        // Array of different greetings
+        const greetings = [
+            'Hello there.',
+            'Hey, gorgeous.',
+            "Ready for a perfect egg?",
+            'Looking good!',
+            'What a lovely day!'
+        ];
+
+        // Array of dynamic messages
+        const flirtyMessages = [
+            'Ready to get things cooking? I\'m EGGLU, and I\'m here to show you how to boil an egg perfectly. Let\'s make some magic together, shall we?',
+            'They say the best things in life are simple. Let me prove it by helping you boil an egg perfectly. We\'ll make a great team.',
+            'You\'ve got the looks, I\'ve got the timing. Together, we can create the most delicious masterpiece. Shall we begin?'
+        ];
+        
+        // Function to set a random greeting and message
+        function setRandomWelcomeText() {
+            const greetingIndex = Math.floor(Math.random() * greetings.length);
+            document.getElementById('welcome-greeting').innerHTML = `<i class="fa-solid fa-egg mr-2"></i>${greetings[greetingIndex]}`;
+            
+            const messageIndex = Math.floor(Math.random() * flirtyMessages.length);
+            document.getElementById('welcome-message').textContent = flirtyMessages[messageIndex];
+        }
+        
+        // Function to show a notification message box
+        function showNotification(message) {
+            const box = document.getElementById('notification-box');
+            const msgElement = document.getElementById('notification-message');
+            msgElement.textContent = message;
+            box.classList.remove('translate-x-full', 'opacity-0');
+            box.classList.add('translate-x-0', 'opacity-100');
+            setTimeout(() => {
+                box.classList.remove('translate-x-0', 'opacity-100');
+                box.classList.add('translate-x-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // Egg boiling times in seconds (assuming from refrigerator cold)
+        const eggBoilTimes = {
+            'soft': {
+                'small': 240, // 4 mins
+                'medium': 270, // 4.5 mins
+                'large': 300, // 5 mins
+                'xl': 330 // 5.5 mins
+            },
+            'jammy': {
+                'small': 330, // 5.5 mins
+                'medium': 360, // 6 mins
+                'large': 390, // 6.5 mins
+                'xl': 420 // 7 mins
+            },
+            'medium': {
+                'small': 360, // 6 mins
+                'medium': 420, // 7 mins
+                'large': 480, // 8 mins
+                'xl': 540 // 9 mins
+            },
+            'hard': {
+                'small': 540, // 9 mins
+                'medium': 600, // 10 mins
+                'large': 660, // 11 mins
+                'xl': 720 // 12 mins
+            }
+        };
+
+        // DOM elements
+        const welcomeModal = document.getElementById('welcome-modal');
+        const instructionsModal = document.getElementById('instructions-modal');
+        const timerModal = document.getElementById('timer-modal');
+        const mainApp = document.getElementById('main-app');
+
+        const closeWelcomeBtn = document.getElementById('close-welcome');
+        const showInstructionsBtn = document.getElementById('show-instructions');
+        const startTimerBtn = document.getElementById('start-timer');
+        const cancelTimerBtn = document.getElementById('cancel-timer');
+        
+        const eggSizeSelection = document.getElementById('egg-size-selection');
+        const boilTypeSelection = document.getElementById('boil-type-selection');
+
+        const timerDisplay = document.getElementById('timer-display');
+        const timerMessage = document.getElementById('timer-message');
+        const dingSound = document.getElementById('ding-sound');
+        const timerProgressBar = document.getElementById('timer-progress-path');
+        
+        // --- Event Listeners ---
+        
+        // Hide welcome modal and show main app
+        closeWelcomeBtn.addEventListener('click', () => {
+            welcomeModal.style.display = 'none';
+            mainApp.classList.remove('hidden');
+            mainApp.classList.add('flex', 'flex-col', 'justify-center', 'items-center');
+        });
+
+        // Handle selection for egg size and boil type
+        function handleSelection(container, event) {
+            const buttons = container.querySelectorAll('.button-base');
+            buttons.forEach(button => button.classList.remove('active'));
+            if (event.target.closest('BUTTON')) {
+                event.target.closest('BUTTON').classList.add('active');
+            }
+        }
+        
+        eggSizeSelection.addEventListener('click', (e) => handleSelection(eggSizeSelection, e));
+        boilTypeSelection.addEventListener('click', (e) => handleSelection(boilTypeSelection, e));
+
+        // Show instructions modal
+        showInstructionsBtn.addEventListener('click', () => {
+            const size = eggSizeSelection.querySelector('.active')?.dataset.value;
+            const boil = boilTypeSelection.querySelector('.active')?.dataset.value;
+
+            if (!size || !boil) {
+                showNotification("Please select both egg size and boil type!");
+                return;
+            }
+
+            totalTime = eggBoilTimes[boil][size];
+            instructionsModal.style.display = 'flex';
+        });
+
+        // Start timer
+        startTimerBtn.addEventListener('click', () => {
+            instructionsModal.style.display = 'none';
+            timerModal.style.display = 'flex';
+            timeLeft = totalTime;
+            isHalfTime = false;
+            
+            const pathElement = document.getElementById('timer-progress-path');
+            const pathLength = pathElement.getTotalLength();
+            pathElement.style.strokeDasharray = pathLength;
+            
+            updateTimerDisplay();
+            timerInterval = setInterval(updateTimer, 1000);
+        });
+
+        // Cancel timer
+        cancelTimerBtn.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            timerModal.style.display = 'none';
+        });
+
+        // --- Timer Functions ---
+        
+        function updateTimer() {
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                dingSound.play();
+                setTimeout(() => dingSound.play(), 500); // Second ding
+                showNotification("Ding! Ding! Your perfect egg is ready, my love!");
+                timerMessage.textContent = "It's done! Enjoy your perfect egg.";
+                timerDisplay.textContent = formatTime(0);
+                timerProgressBar.style.strokeDashoffset = 0;
+                return;
+            }
+
+            timeLeft--;
+            updateTimerDisplay();
+
+            // Check for half-time
+            if (!isHalfTime && timeLeft <= totalTime / 2) {
+                isHalfTime = true;
+                dingSound.play();
+                showNotification("Ding! We're halfway there, my darling!");
+                timerMessage.textContent = "Halfway through the magic.";
+            }
+        }
+        
+        function updateTimerDisplay() {
+            const displayTime = formatTime(timeLeft);
+            timerDisplay.textContent = displayTime;
+            
+            const pathElement = document.getElementById('timer-progress-path');
+            const pathLength = pathElement.getTotalLength();
+            const progress = 1 - (timeLeft / totalTime);
+            const offset = pathLength * progress;
+            pathElement.style.strokeDashoffset = offset;
+        }
+        
+        // Call the function to set the initial greeting and message when the page loads
+        setRandomWelcomeText();
+
+    </script>
+</body>
+</html>
